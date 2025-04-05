@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>MuniputraMeghana_PlayableAdTest</title>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      text-align: center;
+      background: #fefefe;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 {
+      color: #333;
+      font-size: 2.5em;
+      margin-bottom: 10px;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+      animation: fadeIn 1s ease-out;
+    }
+    .game-container {
+      display: flex;
+      justify-content: center;
+      gap: 30px;
+      margin-top: 40px;
+      perspective: 1000px;
+    }
+    .bottle {
+      width: 60px;
+      height: 200px;
+      border: 2px solid #444;
+      border-radius: 10px 10px 5px 5px;
+      background-color: #f5f5f5;
+      display: flex;
+      flex-direction: column-reverse;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    .bottle:hover {
+      transform: translateY(-5px) scale(1.05);
+      box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+    }
+    .liquid {
+      height: 25%;
+      width: 100%;
+      transition: all 0.4s cubic-bezier(0.65, 0, 0.35, 1);
+      position: relative;
+      z-index: 1;
+    }
+    .liquid::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 20%;
+      background: rgba(255,255,255,0.3);
+      border-radius: 50% 50% 0 0;
+    }
+    #status {
+      margin-top: 20px;
+      font-size: 22px;
+      font-weight: bold;
+      color: #444;
+      min-height: 30px;
+      animation: fadeIn 0.5s ease-out;
+      text-shadow: 1px 1px 1px rgba(0,0,0,0.05);
+    }
+    #cta {
+      display: none;
+      margin-top: 30px;
+      animation: bounceIn 0.8s ease-out;
+    }
+    #cta p {
+      font-size: 18px;
+      color: #555;
+      margin-bottom: 15px;
+      animation: fadeIn 1s ease-out;
+    }
+    #cta button {
+      padding: 12px 25px;
+      font-size: 18px;
+      background: linear-gradient(135deg, #28a745, #218838);
+      color: #fff;
+      border: none;
+      border-radius: 30px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
+      animation: pulse 2s infinite;
+    }
+    #cta button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(40, 167, 69, 0.4);
+    }
+    .selected {
+      transform: translateY(-10px) scale(1.05);
+      box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+      animation: selectedPulse 1s infinite;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes bounceIn {
+      0% { opacity: 0; transform: scale(0.5); }
+      50% { opacity: 1; transform: scale(1.1); }
+      100% { transform: scale(1); }
+    }
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+      100% { transform: scale(1); }
+    }
+    @keyframes selectedPulse {
+      0% { box-shadow: 0 0 10px rgba(0,0,0,0.2); }
+      50% { box-shadow: 0 0 20px rgba(0,0,0,0.3); }
+      100% { box-shadow: 0 0 10px rgba(0,0,0,0.2); }
+    }
+    @keyframes liquidPour {
+      0% { transform: translateY(0) rotate(0); }
+      50% { transform: translateY(-20px) rotate(5deg); }
+      100% { transform: translateY(0) rotate(0); }
+    }
+    .win-animation {
+      animation: confetti 2s ease-out;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Color Sort Puzzle</h1>
+  <div id="status">Watch how the game works...</div>
+  <div class="game-container" id="game"></div>
+
+  <div id="cta">
+    <p>Liked it? Play the full game now!</p>
+    <button onclick="redirectToPlayStore()">Play Now</button>
+  </div>
+
+  <script>
+    let bottles = [
+      ['#FF5252', '#4CAF50', '#2196F3', '#FF5252'],  // red, green, blue, red
+      ['#4CAF50', '#2196F3', '#FF5252', '#4CAF50'],  // green, blue, red, green
+      ['#2196F3', '#4CAF50', '#2196F3', '#FF5252'],  // blue, green, blue, red
+      [],
+      []
+    ];
+    let selected = null;
+    let allowUserPlay = false;
+    let autoplayDone = false;
+
+    function render() {
+      const game = document.getElementById('game');
+      game.innerHTML = '';
+      bottles.forEach((bottle, i) => {
+        const div = document.createElement('div');
+        div.className = 'bottle';
+        if (selected === i) div.classList.add('selected');
+        div.onclick = () => {
+          if (!allowUserPlay || !autoplayDone) return;
+          handleBottleClick(i);
+        };
+        for (let color of bottle) {
+          const liq = document.createElement('div');
+          liq.className = 'liquid';
+          liq.style.backgroundColor = color;
+          div.appendChild(liq);
+        }
+        game.appendChild(div);
+      });
+    }
+
+    function animateStatus(text) {
+      const status = document.getElementById('status');
+      status.style.animation = 'none';
+      status.offsetHeight; // Trigger reflow
+      status.style.animation = 'fadeIn 0.5s ease-out';
+      status.innerText = text;
+    }
+
+    function moveColor(fromIndex, toIndex) {
+      return new Promise((resolve) => {
+        const from = bottles[fromIndex];
+        const to = bottles[toIndex];
+        if (from.length === 0 || to.length >= 4) return resolve();
+
+        const colorToMove = from[from.length - 1];
+        if (to.length === 0 || to[to.length - 1] === colorToMove) {
+          // Animate the pouring effect
+          const game = document.getElementById('game');
+          const fromBottle = game.children[fromIndex];
+          const toBottle = game.children[toIndex];
+          
+          if (fromBottle && fromBottle.lastChild) {
+            fromBottle.lastChild.style.animation = 'liquidPour 0.5s ease-out';
+            setTimeout(() => {
+              fromBottle.lastChild.style.animation = '';
+            }, 500);
+          }
+
+          to.push(from.pop());
+          setTimeout(() => {
+            render();
+            resolve();
+          }, 300);
+        } else {
+          resolve();
+        }
+      });
+    }
+
+    async function handleBottleClick(index) {
+      if (selected === null) {
+        if (bottles[index].length === 0) return;
+        selected = index;
+        animateStatus(`Picked bottle ${index + 1}`);
+        render();
+      } else {
+        if (selected !== index) {
+          animateStatus(`Moving to bottle ${index + 1}...`);
+          await moveColor(selected, index);
+        }
+        selected = null;
+        render();
+        animateStatus('Now it\'s your turn!');
+        checkWin();
+      }
+    }
+
+    function checkWin() {
+      const won = bottles.every(b => b.length === 0 || (b.length === 4 && new Set(b).size === 1));
+      if (won) {
+        document.getElementById('status').classList.add('win-animation');
+        animateStatus('🎉 You Won! 🎉');
+        document.getElementById('cta').style.display = 'block';
+        allowUserPlay = false;
+        
+        // Add confetti effect
+        document.body.classList.add('win-animation');
+      }
+    }
+
+    async function autoplayIntro(callback) {
+      let demoSteps = [
+        [0, 3], [0, 4],
+        [1, 3], [2, 4],
+        [1, 0], [2, 1],
+        [3, 2]
+      ];
+      
+      for (let [from, to] of demoSteps) {
+        animateStatus(`Auto-playing: Moving ${from+1} → ${to+1}`);
+        await moveColor(from, to);
+      }
+      if (callback) callback();
+    }
+
+    function redirectToPlayStore() {
+      // Animation when button is clicked
+      const button = document.querySelector('#cta button');
+      button.style.animation = 'bounceIn 0.5s ease-out';
+      setTimeout(() => {
+        window.location.href = 'https://play.google.com/store/apps';
+      }, 500);
+    }
+
+    render();
+
+    // Initial animations
+    setTimeout(() => {
+      animateStatus('Watch how the game works...');
+      autoplayIntro(() => {
+        autoplayDone = true;
+      });
+    }, 500);
+
+    setTimeout(() => {
+      allowUserPlay = true;
+      animateStatus('Now it\'s your turn!');
+    }, 10500);
+
+    setTimeout(() => {
+      if (!document.getElementById('status').innerText.includes('You Won')) {
+        animateStatus('Try the full version for more challenges!');
+        document.getElementById('cta').style.display = 'block';
+        allowUserPlay = false;
+      }
+    }, 26000);
+  </script>
+
+</body>
+</html>
